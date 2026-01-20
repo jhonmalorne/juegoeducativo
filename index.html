@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maestra Daniela: El Rescate de las Vocales</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; background-color: #2c3e50; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: sans-serif; }
+        canvas { border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+<script>
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    backgroundColor: '#87CEEB', // Cielo azul
+    parent: 'game-container',
+    scene: { preload: preload, create: create },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+};
+
+const game = new Phaser.Game(config);
+
+function preload() {
+    // Aquí cargarías tus imágenes reales. Por ahora usamos formas de colores.
+    // Maestra Daniela (Representada por un rectángulo rosa)
+    // Carreta (Rectángulo marrón)
+}
+
+function create() {
+    // 1. Dibujar el Fondo (Suelo de la mina)
+    let ground = this.add.rectangle(400, 550, 800, 100, 0x8B4513);
+    
+    // 2. Texto de Bienvenida
+    this.add.text(20, 20, "¡Ayuda a la Maestra Daniela!", { fontSize: '24px', fill: '#000', fontStyle: 'bold' });
+    this.add.text(20, 50, "Arrastra las vocales a su lugar", { fontSize: '18px', fill: '#000' });
+
+    // 3. Personaje y Carreta (Simulados)
+    this.add.text(100, 450, "👩‍🏫", { fontSize: '80px' }); // Maestra Daniela
+    this.add.text(200, 480, "🛒", { fontSize: '60px' }); // Carreta volcada
+
+    const vocales = ['A', 'E', 'I', 'O', 'U'];
+    const colores = [0xffadad, 0xffd6a5, 0xfdffb6, 0xcaffbf, 0x9bf6ff];
+    
+    // 4. Crear los "Huecos" o destinos (Cuadros grises)
+    vocales.forEach((vocal, index) => {
+        let x = 150 + (index * 130);
+        let destino = this.add.rectangle(x, 200, 100, 100, 0xcccccc).setStrokeStyle(4, 0x666666);
+        this.add.text(x - 10, 185, vocal, { fontSize: '40px', fill: '#ffffff' });
+        destino.vocalAsociada = vocal;
+    });
+
+    // 5. Crear las "Piedras" dispersas
+    vocales.forEach((vocal, index) => {
+        let x = 150 + (index * 130);
+        let y = 450;
+        
+        // Creamos un contenedor para la piedra y la letra
+        let contenedor = this.add.container(x + (Math.random() * 50), y + (Math.random() * 50));
+        let circulo = this.add.circle(0, 0, 40, colores[index]).setStrokeStyle(3, 0x333333);
+        let texto = this.add.text(-15, -25, vocal, { fontSize: '45px', fill: '#000', fontStyle: 'bold' });
+        
+        contenedor.add([circulo, texto]);
+        contenedor.setSize(80, 80);
+        contenedor.setInteractive({ draggable: true });
+        contenedor.vocal = vocal;
+
+        // Lógica de arrastrar
+        contenedor.on('drag', (pointer, dragX, dragY) => {
+            contenedor.x = dragX;
+            contenedor.y = dragY;
+        });
+
+        contenedor.on('dragend', (pointer) => {
+            // Verificar si cayó cerca de su cuadro
+            let xDestino = 150 + (vocales.indexOf(vocal) * 130);
+            let distancia = Phaser.Math.Distance.Between(contenedor.x, contenedor.y, xDestino, 200);
+
+            if (distancia < 60) {
+                contenedor.x = xDestino;
+                contenedor.y = 200;
+                contenedor.disableInteractive();
+                // Aquí podrías poner un sonido de "¡Muy bien!"
+                this.add.text(contenedor.x - 20, 130, "✨", { fontSize: '40px' });
+            } else {
+                // Regresa a su lugar si falla (opcional)
+                this.tweens.add({
+                    targets: contenedor,
+                    x: x + 20,
+                    y: y + 20,
+                    duration: 500,
+                    ease: 'Power2'
+                });
+            }
+        });
+    });
+}
+</script>
+
+</body>
+</html>
