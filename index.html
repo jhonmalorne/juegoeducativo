@@ -6,581 +6,337 @@
     <title>Joyas Vocales - Juego Educativo</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-            padding: 10px;
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+            background: #16213e;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; overflow: hidden; padding: 10px;
         }
-        
         #game-container {
-            width: 100%;
-            max-width: 1200px;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-            position: relative;
+            width: 100%; max-width: 1200px;
+            border-radius: 20px; overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         }
-        
-        #game-canvas {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        
         .instructions {
-            color: white;
-            text-align: center;
-            margin-top: 20px;
-            padding: 0 15px;
-            font-size: 1.2rem;
-            line-height: 1.5;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        .credits {
-            color: #aaa;
-            text-align: center;
-            margin-top: 15px;
-            font-size: 0.9rem;
-            padding: 0 15px;
-        }
-        
-        @media (max-width: 768px) {
-            .instructions {
-                font-size: 1rem;
-                margin-top: 15px;
-            }
-            
-            .credits {
-                font-size: 0.8rem;
-            }
-        }
-        
-        @media (max-height: 700px) {
-            body {
-                padding: 5px;
-            }
+            color: white; text-align: center; margin-top: 15px;
+            font-size: 1.1rem; padding: 0 15px;
         }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <div id="game-canvas"></div>
+        <!-- El canvas del juego se insertará aquí -->
     </div>
-    
-    <div class="instructions">
-        <p>¡Ayuda a la Maestra Daniela a recuperar sus joyas vocales! Arrastra cada joya a su vocal correspondiente.</p>
-    </div>
-    
-    <div class="credits">
-        <p>Juego educativo para niños de 4-6 años | Diseñado con Phaser 3</p>
-    </div>
+    <p class="instructions">¡Ayuda a la Maestra Daniela! Arrastra cada joya a su vocal.</p>
 
     <script>
-        // Variables globales para las escenas
-        let game;
-        
-        // Configuración del juego Phaser
+        // CONFIGURACIÓN PRINCIPAL DEL JUEGO
         const config = {
             type: Phaser.AUTO,
-            parent: 'game-canvas',
+            parent: 'game-container',
             width: 1200,
             height: 800,
             backgroundColor: '#1a1a2e',
             scale: {
                 mode: Phaser.Scale.FIT,
-                autoCenter: Phaser.Scale.CENTER_BOTH,
-                min: {
-                    width: 300,
-                    height: 500
-                }
+                autoCenter: Phaser.Scale.CENTER_BOTH
             },
-            scene: [PreloadScene, GameScene],
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 0 },
-                    debug: false
-                }
-            },
-            audio: {
-                disableWebAudio: false
-            }
+            scene: [BootScene, GameScene],
+            audio: { disableWebAudio: false }
         };
 
-        // Inicializar el juego cuando la página esté lista
-        window.onload = function() {
-            game = new Phaser.Game(config);
-        };
+        // INICIAR EL JUEGO CUANDO LA PÁGINA CARGUE
+        window.onload = () => new Phaser.Game(config);
 
-        // Escena de precarga
-        class PreloadScene extends Phaser.Scene {
-            constructor() {
-                super('PreloadScene');
-            }
-            
+        // ================== ESCENA DE ARRANQUE (BOOT) ==================
+        class BootScene extends Phaser.Scene {
+            constructor() { super('BootScene'); }
+
             preload() {
-                // Crear elementos visuales para la pantalla de carga
-                this.createLoadingScreen();
-                
-                // Cargar imágenes desde URLs externas
+                // 1. INTENTAR CARGAR IMÁGENES EXTERNAS
+                // Nota: Estas URLs de Imgur podrían no funcionar. Si fallan, usaremos gráficos generados.
                 this.load.image('mine_background', 'https://imgur.com/cv6VkL2.png');
                 this.load.image('teacher', 'https://imgur.com/9jcjLiB.png');
                 this.load.image('jewel_base', 'https://imgur.com/CQ2q4CV.png');
-                
-                // Cargar sonidos (asumiendo que están en la misma carpeta)
-                this.load.audio('click_sound', 'sonidoclick.mp3');
-                this.load.audio('correct_sound', 'sonidocorrecto.mp3');
-                this.load.audio('error_sound', 'sonidodeerror.mp3');
-                
-                // Manejo de errores en carga de assets
+
+                // 2. MANEJAR ERRORES DE CARGA
                 this.load.on('loaderror', (file) => {
-                    console.warn(`Error cargando: ${file.key}`);
+                    console.warn(`No se pudo cargar: ${file.key}. Se usará un gráfico de respaldo.`);
                 });
             }
-            
-            createLoadingScreen() {
-                // Fondo de la pantalla de carga
-                const width = this.cameras.main.width;
-                const height = this.cameras.main.height;
-                
-                // Fondo decorativo
-                const bg = this.add.graphics();
-                bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1);
-                bg.fillRect(0, 0, width, height);
-                
-                // Título
-                const title = this.add.text(width / 2, height / 3, 'Joyas Vocales', {
-                    fontFamily: 'Comic Sans MS',
-                    fontSize: '48px',
-                    fontWeight: 'bold',
-                    color: '#ffffff',
-                    stroke: '#4a148c',
-                    strokeThickness: 6,
-                    shadow: { offsetX: 3, offsetY: 3, color: '#000', blur: 5, fill: true }
-                });
-                title.setOrigin(0.5);
-                
-                // Subtítulo
-                const subtitle = this.add.text(width / 2, height / 3 + 60, 'Juego Educativo', {
-                    fontFamily: 'Comic Sans MS',
-                    fontSize: '28px',
-                    color: '#ffcc00',
-                    fontStyle: 'italic'
-                });
-                subtitle.setOrigin(0.5);
-                
-                // Barra de progreso (fondo)
-                const progressBarBg = this.add.graphics();
-                progressBarBg.fillStyle(0x333366, 0.8);
-                progressBarBg.fillRect(width / 4, height / 2 + 50, width / 2, 30);
-                progressBarBg.lineStyle(4, 0xffffff, 1);
-                progressBarBg.strokeRect(width / 4, height / 2 + 50, width / 2, 30);
-                
-                // Barra de progreso (relleno)
-                const progressBar = this.add.graphics();
-                
-                // Texto de carga
-                const loadingText = this.add.text(width / 2, height / 2 + 100, 'Cargando... 0%', {
-                    fontFamily: 'Comic Sans MS',
-                    fontSize: '24px',
-                    color: '#ffffff'
-                });
-                loadingText.setOrigin(0.5);
-                
-                // Animación de joyas girando
-                const jewel = this.add.sprite(width / 2, height / 2 - 50, 'jewel_base');
-                jewel.setScale(0.8);
-                
-                // Animación de giro de la joya
-                this.tweens.add({
-                    targets: jewel,
-                    angle: 360,
-                    duration: 2000,
-                    ease: 'Linear',
-                    repeat: -1
-                });
-                
-                // Actualizar barra de progreso durante la carga
-                this.load.on('progress', (value) => {
-                    progressBar.clear();
-                    progressBar.fillStyle(0x6a11cb, 1);
-                    progressBar.fillRect(width / 4 + 5, height / 2 + 55, (width / 2 - 10) * value, 20);
-                    
-                    // Actualizar porcentaje
-                    loadingText.setText(`Cargando... ${Math.floor(value * 100)}%`);
-                    
-                    // Efecto de brillo en la joya
-                    jewel.setAlpha(0.7 + 0.3 * value);
-                });
-                
-                // Cuando se complete la carga
-                this.load.on('complete', () => {
-                    // Efecto de transición
-                    this.tweens.add({
-                        targets: [title, subtitle, progressBarBg, progressBar, loadingText, jewel],
-                        alpha: 0,
-                        duration: 500,
-                        ease: 'Power2',
-                        onComplete: () => {
-                            this.scene.start('GameScene');
-                        }
-                    });
-                });
-            }
-            
+
             create() {
-                // Esta función se llama después de preload, pero ya hemos pasado a GameScene
+                // Pasar a la escena principal
+                this.scene.start('GameScene');
             }
         }
 
-        // Escena principal del juego
+        // ================== ESCENA PRINCIPAL DEL JUEGO ==================
         class GameScene extends Phaser.Scene {
             constructor() {
                 super('GameScene');
-                this.jewels = [];
-                this.vowelTargets = [];
-                this.placedJewels = 0;
-                this.totalJewels = 5;
                 this.vowels = ['A', 'E', 'I', 'O', 'U'];
                 this.jewelColors = [0xFF6B6B, 0x4ECDC4, 0x45B7D1, 0x96CEB4, 0xFFEAA7];
+                this.placedJewels = 0;
             }
-            
+
             create() {
-                // Cargar sonidos
-                this.clickSound = this.sound.add('click_sound');
-                this.correctSound = this.sound.add('correct_sound');
-                this.errorSound = this.sound.add('error_sound');
-                
-                // Si los sonidos no se cargaron, creamos placeholders silenciosos
-                if (!this.clickSound) this.clickSound = { play: () => {} };
-                if (!this.correctSound) this.correctSound = { play: () => {} };
-                if (!this.errorSound) this.errorSound = { play: () => {} };
-                
-                // Crear fondo
+                console.log("Escena GameScene iniciada. Creando elementos...");
+
+                // 1. CREAR FONDO (con respaldo si la imagen falla)
                 this.createBackground();
-                
-                // Crear globo de diálogo de la maestra
-                this.createSpeechBubble();
-                
-                // Crear contenedores para las vocales
+
+                // 2. CREAR MAESTRA DANIELA (con respaldo si la imagen falla)
+                this.createTeacher();
+
+                // 3. CREAR CONTENEDORES DE VOCALES
                 this.createVowelTargets();
-                
-                // Crear joyas vocales
+
+                // 4. CREAR JOYAS ARRASTRABLES
                 this.createJewels();
-                
-                // Configurar interacciones de arrastrar y soltar
+
+                // 5. CONFIGURAR ARRASTRAR Y SOLTAR
                 this.setupDragAndDrop();
-                
-                // Configurar ajuste de pantalla
-                this.scale.on('resize', this.resize, this);
-                
-                // Inicializar partículas para efectos
+
+                // 6. INICIALIZAR EFECTOS DE PARTÍCULAS
                 this.initParticles();
             }
-            
+
+            // === MÉTODO MEJORADO: CREAR FONDO CON RESPALDO ===
             createBackground() {
-                // Intentar cargar el fondo de mina, si falla usar un gradiente
+                const width = this.cameras.main.width;
+                const height = this.cameras.main.height;
+
+                // Intentar usar la imagen cargada
                 try {
-                    this.add.image(0, 0, 'mine_background')
-                        .setOrigin(0, 0)
-                        .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-                } catch (e) {
-                    // Fondo de respuesto con gradiente
+                    const bg = this.add.image(width/2, height/2, 'mine_background');
+                    bg.setDisplaySize(width, height);
+                    console.log("Fondo de mina cargado desde URL.");
+                } catch (error) {
+                    // RESPALDO: Crear un fondo con gráficos
+                    console.log("Creando fondo de mina con gráficos (respaldo).");
                     const bg = this.add.graphics();
-                    const width = this.cameras.main.width;
-                    const height = this.cameras.main.height;
                     
                     // Gradiente para el fondo
-                    const gradient = bg.createGradient(0, 0, width, height, [
-                        { offset: 0, color: 0x2c3e50 },
-                        { offset: 0.5, color: 0x34495e },
-                        { offset: 1, color: 0x2c3e50 }
-                    ]);
-                    
-                    bg.fillGradientStyle(gradient, false);
-                    bg.fillRect(0, 0, width, height);
-                    
-                    // Añadir textura de "mina" con gráficos
-                    for (let i = 0; i < 20; i++) {
+                    const fillStyle = bg.fillGradientStyle(0x2c3e50, 0x2c3e50, 0x34495e, 0x34495e, 1);
+                    if (fillStyle) {
+                        bg.fillGradientStyle(0x2c3e50, 0x2c3e50, 0x34495e, 0x34495e, 1);
+                        bg.fillRect(0, 0, width, height);
+                    } else {
+                        // Para versiones antiguas de Phaser
+                        bg.fillStyle(0x2c3e50, 1);
+                        bg.fillRect(0, 0, width, height);
+                    }
+
+                    // Dibujar "rocas" en la mina
+                    bg.fillStyle(0x5D4037, 0.9);
+                    for (let i = 0; i < 25; i++) {
                         const x = Phaser.Math.Between(0, width);
                         const y = Phaser.Math.Between(0, height);
-                        const size = Phaser.Math.Between(10, 40);
-                        
-                        bg.fillStyle(0x5D4037, 0.7);
+                        const size = Phaser.Math.Between(15, 50);
                         bg.fillCircle(x, y, size);
-                        
-                        // Pequeñas luces en la mina
-                        if (i % 5 === 0) {
-                            bg.fillStyle(0xFFD700, 0.4);
-                            bg.fillCircle(x + 5, y - 5, size / 3);
-                        }
+                    }
+
+                    // Dibujar suelo
+                    bg.fillStyle(0x4E342E, 1);
+                    bg.fillRect(0, height - 120, width, 120);
+
+                    // Textura del suelo
+                    bg.fillStyle(0x3E2723, 1);
+                    for (let i = 0; i < width / 40; i++) {
+                        bg.fillRect(i * 40, height - 120, 30, 15);
                     }
                 }
-                
-                // Crear suelo de la mina
-                const ground = this.add.graphics();
-                ground.fillStyle(0x5D4037, 1);
-                ground.fillRect(0, this.cameras.main.height - 100, 
-                               this.cameras.main.width, 100);
-                
-                // Añadir textura al suelo
-                ground.fillStyle(0x3E2723, 0.7);
-                for (let i = 0; i < 15; i++) {
-                    const x = i * 80;
-                    const width = 60;
-                    ground.fillRect(x, this.cameras.main.height - 100, width, 20);
-                }
-                
-                // Añadir a la maestra Daniela
-                this.createTeacher();
             }
-            
+
+            // === MÉTODO MEJORADO: CREAR MAESTRA CON RESPALDO ===
             createTeacher() {
                 const width = this.cameras.main.width;
-                const height = this.cameras.main.height;
-                
+                const x = width * 0.15;
+                const y = this.cameras.main.height * 0.85;
+
                 try {
-                    // Intentar cargar la imagen de la maestra
-                    this.teacher = this.add.image(width * 0.15, height * 0.75, 'teacher');
-                    this.teacher.setScale(0.7);
-                    this.teacher.setOrigin(0.5, 1); // Anclada desde la base
+                    // Intentar usar la imagen cargada
+                    const teacher = this.add.image(x, y, 'teacher');
+                    teacher.setScale(0.7);
+                    teacher.setOrigin(0.5, 1);
+                    console.log("Maestra Daniela cargada desde URL.");
+                } catch (error) {
+                    // RESPALDO: Crear maestra con gráficos
+                    console.log("Creando maestra con gráficos (respaldo).");
+                    const teacher = this.add.graphics();
                     
-                    // Añadir sombra
-                    this.teacher.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-                } catch (e) {
-                    // Si falla, crear un sprite de respuesto
-                    this.teacher = this.add.graphics();
-                    const teacherX = width * 0.15;
-                    const teacherY = height * 0.75;
+                    // Cuerpo (vestido)
+                    teacher.fillStyle(0x6A1B9A, 1);
+                    teacher.fillEllipse(x, y - 60, 50, 80);
                     
-                    // Cuerpo
-                    this.teacher.fillStyle(0x6A1B9A, 1);
-                    this.teacher.fillCircle(teacherX, teacherY - 40, 30);
-                    
-                    // Vestido
-                    this.teacher.fillStyle(0xAB47BC, 1);
-                    this.teacher.fillTriangle(
-                        teacherX - 30, teacherY - 40,
-                        teacherX + 30, teacherY - 40,
-                        teacherX, teacherY + 40
-                    );
-                    
-                    // Cara
-                    this.teacher.fillStyle(0xFFCCBC, 1);
-                    this.teacher.fillCircle(teacherX, teacherY - 50, 15);
+                    // Cabeza
+                    teacher.fillStyle(0xFFCCBC, 1);
+                    teacher.fillCircle(x, y - 140, 30);
                     
                     // Ojos
-                    this.teacher.fillStyle(0x000000, 1);
-                    this.teacher.fillCircle(teacherX - 5, teacherY - 52, 3);
-                    this.teacher.fillCircle(teacherX + 5, teacherY - 52, 3);
+                    teacher.fillStyle(0x000000, 1);
+                    teacher.fillCircle(x - 10, y - 145, 5);
+                    teacher.fillCircle(x + 10, y - 145, 5);
                     
                     // Sonrisa
-                    this.teacher.lineStyle(2, 0x000000, 1);
-                    this.teacher.beginPath();
-                    this.teacher.arc(teacherX, teacherY - 48, 8, 0.2, Math.PI - 0.2, false);
-                    this.teacher.strokePath();
+                    teacher.lineStyle(3, 0x000000, 1);
+                    teacher.beginPath();
+                    teacher.arc(x, y - 135, 15, 0.2, Math.PI - 0.2, false);
+                    teacher.strokePath();
                     
-                    this.teacher.setDepth(5);
+                    // Brazos
+                    teacher.fillStyle(0xFFCCBC, 1);
+                    teacher.fillRect(x - 60, y - 100, 40, 15);
+                    teacher.fillRect(x + 20, y - 100, 40, 15);
+                    
+                    // Añadir animación
+                    this.tweens.add({
+                        targets: teacher,
+                        y: teacher.y - 10,
+                        duration: 2000,
+                        ease: 'Sine.easeInOut',
+                        yoyo: true,
+                        repeat: -1
+                    });
                 }
-                
-                // Animación sutil de la maestra
-                this.tweens.add({
-                    targets: this.teacher,
-                    y: this.teacher.y - 5,
-                    duration: 1500,
-                    ease: 'Sine.easeInOut',
-                    yoyo: true,
-                    repeat: -1
-                });
+
+                // GLOBO DE DIÁLOGO (siempre con gráficos)
+                this.createSpeechBubble();
             }
-            
+
             createSpeechBubble() {
                 const width = this.cameras.main.width;
-                const height = this.cameras.main.height;
-                
-                // Calcular posición del globo cerca de la maestra
-                const bubbleX = width * 0.15 + 180;
-                const bubbleY = height * 0.5;
-                
-                // Crear globo de diálogo con gráficos
+                const x = width * 0.15 + 200;
+                const y = this.cameras.main.height * 0.55;
+
+                // Globo
                 const bubble = this.add.graphics();
-                
-                // Contorno del globo
                 bubble.fillStyle(0xFFFFFF, 1);
-                bubble.lineStyle(4, 0x000000, 1);
-                
-                // Cuerpo principal del globo
-                bubble.fillRoundedRect(bubbleX - 200, bubbleY - 80, 400, 100, 20);
-                bubble.strokeRoundedRect(bubbleX - 200, bubbleY - 80, 400, 100, 20);
-                
-                // Punta del globo que apunta a la maestra
+                bubble.fillRoundedRect(x - 180, y - 70, 360, 90, 20);
+                bubble.lineStyle(4, 0x5D4037, 1);
+                bubble.strokeRoundedRect(x - 180, y - 70, 360, 90, 20);
+
+                // Punta del globo
                 bubble.fillStyle(0xFFFFFF, 1);
-                bubble.lineStyle(4, 0x000000, 1);
                 bubble.beginPath();
-                bubble.moveTo(bubbleX - 120, bubbleY + 20);
-                bubble.lineTo(bubbleX - 180, bubbleY + 60);
-                bubble.lineTo(bubbleX - 60, bubbleY + 20);
+                bubble.moveTo(x - 100, y + 20);
+                bubble.lineTo(x - 160, y + 60);
+                bubble.lineTo(x - 40, y + 20);
                 bubble.closePath();
                 bubble.fillPath();
+                bubble.lineStyle(4, 0x5D4037, 1);
                 bubble.strokePath();
-                
-                // Texto dentro del globo
-                const speechText = this.add.text(bubbleX, bubbleY - 30, 
-                    '¡Hello! Help me organize\nmy vowel jewels, please!', {
-                    fontFamily: 'Comic Sans MS',
-                    fontSize: '24px',
+
+                // Texto
+                const text = this.add.text(x, y - 25, '¡Hola! Ayúdame a organizar\nmis joyas vocales, por favor', {
+                    fontFamily: 'Arial Rounded MT Bold',
+                    fontSize: '22px',
                     color: '#000000',
                     align: 'center',
                     fontWeight: 'bold',
-                    lineSpacing: 10
+                    lineSpacing: 8
                 });
-                speechText.setOrigin(0.5);
-                
-                // Sombra para el texto
-                speechText.setShadow(2, 2, 'rgba(0,0,0,0.2)', 2);
-                
-                // Añadir animación de entrada
-                bubble.setAlpha(0);
-                speechText.setAlpha(0);
-                
-                this.tweens.add({
-                    targets: [bubble, speechText],
-                    alpha: 1,
-                    duration: 800,
-                    ease: 'Power2'
-                });
-                
-                bubble.setDepth(10);
-                speechText.setDepth(11);
+                text.setOrigin(0.5);
             }
-            
+
             createVowelTargets() {
                 const width = this.cameras.main.width;
                 const height = this.cameras.main.height;
-                
-                // Espaciado entre contenedores
                 const spacing = width / (this.vowels.length + 1);
-                
-                // Crear un contenedor para cada vocal
+
                 for (let i = 0; i < this.vowels.length; i++) {
                     const x = spacing * (i + 1);
-                    const y = height * 0.2;
-                    
-                    // Crear gráfico para el contenedor (vagón de mina)
-                    const target = this.add.graphics();
-                    
-                    // Cuerpo del vagón
-                    target.fillStyle(0x8D6E63, 1);
-                    target.fillRoundedRect(x - 70, y - 60, 140, 120, 15);
-                    
-                    // Detalles del vagón
-                    target.lineStyle(4, 0x5D4037, 1);
-                    target.strokeRoundedRect(x - 70, y - 60, 140, 120, 15);
-                    
+                    const y = height * 0.22;
+
+                    // Contenedor (vagón de mina)
+                    const wagon = this.add.graphics();
+                    wagon.fillStyle(0x8D6E63, 1);
+                    wagon.fillRoundedRect(x - 65, y - 55, 130, 110, 15);
+                    wagon.lineStyle(4, 0x5D4037, 1);
+                    wagon.strokeRoundedRect(x - 65, y - 55, 130, 110, 15);
+
                     // Ruedas
-                    target.fillStyle(0x37474F, 1);
-                    target.fillCircle(x - 40, y + 40, 15);
-                    target.fillCircle(x + 40, y + 40, 15);
-                    
+                    wagon.fillStyle(0x37474F, 1);
+                    wagon.fillCircle(x - 35, y + 40, 12);
+                    wagon.fillCircle(x + 35, y + 40, 12);
+
                     // Ventana
-                    target.fillStyle(0x81D4FA, 0.8);
-                    target.fillRoundedRect(x - 40, y - 40, 80, 50, 10);
-                    
-                    // Etiqueta con la vocal
-                    const vowelText = this.add.text(x, y - 15, this.vowels[i], {
-                        fontFamily: 'Comic Sans MS',
-                        fontSize: '48px',
+                    wagon.fillStyle(0x81D4FA, 0.7);
+                    wagon.fillRoundedRect(x - 35, y - 35, 70, 40, 8);
+
+                    // Letra de la vocal
+                    const letter = this.add.text(x, y - 10, this.vowels[i], {
+                        fontFamily: 'Arial Rounded MT Bold',
+                        fontSize: '46px',
                         color: '#FFFFFF',
                         fontWeight: 'bold',
                         stroke: '#000000',
-                        strokeThickness: 6
+                        strokeThickness: 5
                     });
-                    vowelText.setOrigin(0.5);
-                    
-                    // Guardar información del target
+                    letter.setOrigin(0.5);
+
+                    // Guardar referencia para la lógica de colisión
+                    this.vowelTargets = this.vowelTargets || [];
                     this.vowelTargets.push({
-                        graphics: target,
-                        text: vowelText,
-                        x: x,
-                        y: y,
+                        x: x, y: y,
                         vowel: this.vowels[i],
-                        bounds: new Phaser.Geom.Rectangle(x - 70, y - 60, 140, 120)
+                        bounds: new Phaser.Geom.Rectangle(x - 65, y - 55, 130, 110)
                     });
-                    
-                    // Añadir sombra
-                    target.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-                    vowelText.setShadow(3, 3, 'rgba(0,0,0,0.5)', 3);
-                    
+
                     // Animación de entrada
-                    target.setScale(0);
-                    vowelText.setScale(0);
-                    
+                    wagon.setScale(0);
+                    letter.setScale(0);
                     this.tweens.add({
-                        targets: [target, vowelText],
-                        scaleX: 1,
-                        scaleY: 1,
-                        duration: 600,
-                        delay: i * 100,
+                        targets: [wagon, letter],
+                        scaleX: 1, scaleY: 1,
+                        duration: 600, delay: i * 100,
                         ease: 'Back.easeOut'
                     });
                 }
             }
-            
+
             createJewels() {
                 const width = this.cameras.main.width;
                 const height = this.cameras.main.height;
-                
-                // Crear las joyas dispersas en la parte inferior
+                this.jewels = [];
+
                 for (let i = 0; i < this.vowels.length; i++) {
-                    // Posición aleatoria en la parte inferior
+                    // Posición inicial aleatoria
                     const x = Phaser.Math.Between(width * 0.1, width * 0.9);
-                    const y = Phaser.Math.Between(height * 0.7, height * 0.9);
-                    
-                    // Crear contenedor para la joya y su letra
+                    const y = Phaser.Math.Between(height * 0.65, height * 0.85);
+
+                    // CONTENEDOR para la joya (permite agrupar gráficos y texto)
                     const jewelContainer = this.add.container(x, y);
-                    
-                    // Crear sprite de joya
+
+                    // INTENTAR usar la imagen de joya cargada
                     let jewelSprite;
                     try {
                         jewelSprite = this.add.sprite(0, 0, 'jewel_base');
-                    } catch (e) {
-                        // Si falla la carga, crear una joya con gráficos
+                        jewelSprite.setScale(0.9);
+                        console.log(`Joyas cargadas desde URL para ${this.vowels[i]}.`);
+                    } catch (error) {
+                        // RESPALDO: Crear joya con gráficos
                         jewelSprite = this.add.graphics();
                         // Base de la joya
                         jewelSprite.fillStyle(this.jewelColors[i], 1);
                         jewelSprite.fillCircle(0, 0, 40);
-                        
-                        // Brillo de la joya
+                        // Brillo
                         jewelSprite.fillStyle(0xFFFFFF, 0.6);
                         jewelSprite.fillEllipse(-15, -15, 20, 10);
+                        // Contorno
+                        jewelSprite.lineStyle(3, 0xFFFFFF, 0.8);
+                        jewelSprite.strokeCircle(0, 0, 40);
                     }
-                    
+
                     // Añadir la joya al contenedor
                     jewelContainer.add(jewelSprite);
-                    
-                    // Añadir la letra vocal sobre la joya
+
+                    // Añadir la letra vocal
                     const jewelText = this.add.text(0, 0, this.vowels[i], {
-                        fontFamily: 'Comic Sans MS',
-                        fontSize: '36px',
+                        fontFamily: 'Arial Rounded MT Bold',
+                        fontSize: '34px',
                         color: '#FFFFFF',
                         fontWeight: 'bold',
                         stroke: '#000000',
@@ -588,401 +344,238 @@
                     });
                     jewelText.setOrigin(0.5);
                     jewelContainer.add(jewelText);
-                    
-                    // Configurar propiedades de la joya
+
+                    // Configurar propiedades
                     jewelContainer.setData('vowel', this.vowels[i]);
                     jewelContainer.setData('originalX', x);
                     jewelContainer.setData('originalY', y);
                     jewelContainer.setData('placed', false);
-                    jewelContainer.setData('sprite', jewelSprite);
-                    
-                    // Añadir sombra
-                    jewelContainer.setShadow(3, 3, 'rgba(0,0,0,0.5)', 5);
-                    
+
                     // Animación de entrada
                     jewelContainer.setScale(0);
                     this.tweens.add({
                         targets: jewelContainer,
-                        scaleX: 1,
-                        scaleY: 1,
-                        duration: 600,
-                        delay: 500 + i * 100,
+                        scaleX: 1, scaleY: 1,
+                        duration: 600, delay: 500 + i * 100,
                         ease: 'Back.easeOut'
                     });
-                    
-                    // Animación flotante para las joyas
+
+                    // Animación flotante
                     this.tweens.add({
                         targets: jewelContainer,
-                        y: jewelContainer.y - 5,
-                        duration: 1500 + i * 200,
+                        y: jewelContainer.y - 8,
+                        duration: 1600 + i * 200,
                         ease: 'Sine.easeInOut',
-                        yoyo: true,
-                        repeat: -1,
-                        delay: i * 100
+                        yoyo: true, repeat: -1
                     });
-                    
-                    // Guardar referencia a la joya
+
+                    // Guardar referencia
                     this.jewels.push(jewelContainer);
                 }
             }
-            
+
             setupDragAndDrop() {
-                // Configurar arrastre para cada joya
+                // Hacer cada joya arrastrable
                 this.jewels.forEach(jewel => {
-                    // Hacer la joya interactiva
-                    jewel.setInteractive(new Phaser.Geom.Circle(0, 0, 50), Phaser.Geom.Circle.Contains);
-                    
-                    // Evento cuando se presiona la joya
+                    jewel.setInteractive(new Phaser.Geom.Circle(0, 0, 45), Phaser.Geom.Circle.Contains);
                     this.input.setDraggable(jewel);
-                    
-                    jewel.on('dragstart', (pointer) => {
+
+                    // AL COMENZAR A ARRASTRAR
+                    jewel.on('dragstart', () => {
                         if (jewel.getData('placed')) return;
                         
-                        // Reproducir sonido de clic
-                        this.clickSound.play();
-                        
-                        // Traer al frente
+                        // Efecto visual
                         jewel.setDepth(999);
-                        
-                        // Efecto de escala al agarrar
                         this.tweens.add({
                             targets: jewel,
-                            scaleX: 1.2,
-                            scaleY: 1.2,
-                            duration: 150,
-                            ease: 'Back.easeOut'
+                            scaleX: 1.2, scaleY: 1.2,
+                            duration: 150, ease: 'Back.easeOut'
                         });
                     });
-                    
+
+                    // MIENTRAS SE ARRASTRA
                     jewel.on('drag', (pointer, dragX, dragY) => {
                         if (jewel.getData('placed')) return;
-                        
-                        // Mover la joya con el puntero
                         jewel.x = dragX;
                         jewel.y = dragY;
                     });
-                    
-                    jewel.on('dragend', (pointer) => {
+
+                    // AL SOLTAR
+                    jewel.on('dragend', () => {
                         if (jewel.getData('placed')) return;
-                        
+
                         const vowel = jewel.getData('vowel');
                         let placed = false;
-                        
-                        // Verificar si la joya está sobre su contenedor correspondiente
-                        for (const target of this.vowelTargets) {
-                            if (target.vowel === vowel) {
-                                const jewelBounds = new Phaser.Geom.Circle(jewel.x, jewel.y, 40);
-                                
-                                if (Phaser.Geom.Intersects.CircleToRectangle(jewelBounds, target.bounds)) {
-                                    // ¡Acierto!
-                                    this.handleCorrectPlacement(jewel, target);
-                                    placed = true;
-                                    break;
+
+                        // Verificar colisión con contenedores
+                        if (this.vowelTargets) {
+                            for (const target of this.vowelTargets) {
+                                if (target.vowel === vowel) {
+                                    // Geometría para detectar superposición
+                                    const jewelBounds = new Phaser.Geom.Circle(jewel.x, jewel.y, 40);
+                                    
+                                    if (Phaser.Geom.Intersects.CircleToRectangle(jewelBounds, target.bounds)) {
+                                        this.handleCorrectPlacement(jewel, target);
+                                        placed = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                        
-                        // Si no se colocó correctamente, devolver a la posición original
+
+                        // Si no acertó, volver a la posición original
                         if (!placed) {
                             this.handleIncorrectPlacement(jewel);
                         }
                     });
                 });
             }
-            
+
             handleCorrectPlacement(jewel, target) {
                 // Marcar como colocada
                 jewel.setData('placed', true);
-                
-                // Reproducir sonido de acierto
-                this.correctSound.play();
-                
-                // Desactivar interactividad
                 jewel.disableInteractive();
-                
-                // Mover la joya al centro del contenedor
+
+                // Mover al centro del contenedor
                 this.tweens.add({
                     targets: jewel,
-                    x: target.x,
-                    y: target.y,
-                    scaleX: 1.1,
-                    scaleY: 1.1,
-                    duration: 300,
-                    ease: 'Back.easeOut',
+                    x: target.x, y: target.y,
+                    scaleX: 1.1, scaleY: 1.1,
+                    duration: 300, ease: 'Back.easeOut',
                     onComplete: () => {
                         // Efecto de partículas
                         this.createParticleEffect(target.x, target.y);
                         
-                        // Pequeña animación de "asentamiento"
+                        // Asentarse
                         this.tweens.add({
                             targets: jewel,
-                            scaleX: 1,
-                            scaleY: 1,
-                            duration: 200,
-                            ease: 'Bounce.easeOut'
+                            scaleX: 1, scaleY: 1,
+                            duration: 200, ease: 'Bounce.easeOut'
                         });
-                        
-                        // Incrementar contador de joyas colocadas
+
+                        // Contar aciertos
                         this.placedJewels++;
-                        
-                        // Verificar si se completó el juego
-                        if (this.placedJewels >= this.totalJewels) {
+                        if (this.placedJewels >= this.vowels.length) {
                             this.showCompletionScreen();
                         }
                     }
                 });
             }
-            
+
             handleIncorrectPlacement(jewel) {
-                // Reproducir sonido de error
-                this.errorSound.play();
-                
-                // Devolver a la posición original con animación
+                // Devolver suavemente a la posición original
                 this.tweens.add({
                     targets: jewel,
                     x: jewel.getData('originalX'),
                     y: jewel.getData('originalY'),
-                    scaleX: 1,
-                    scaleY: 1,
-                    duration: 500,
-                    ease: 'Power2.easeOut',
-                    onComplete: () => {
-                        // Volver al depth normal
-                        jewel.setDepth(0);
-                    }
+                    scaleX: 1, scaleY: 1,
+                    duration: 500, ease: 'Power2.easeOut'
                 });
             }
-            
+
             initParticles() {
-                // Crear configuración de partículas para efectos de acierto
+                // Configuración base para efectos de partículas
                 this.particleConfig = {
-                    frame: 'circle',
-                    quantity: 20,
-                    lifespan: 1000,
-                    speed: { min: 100, max: 200 },
-                    scale: { start: 0.8, end: 0 },
-                    alpha: { start: 1, end: 0 },
-                    blendMode: 'ADD'
+                    quantity: 15,
+                    lifespan: 800,
+                    speed: { min: 80, max: 180 },
+                    scale: { start: 0.7, end: 0 },
+                    alpha: { start: 1, end: 0 }
                 };
             }
-            
+
             createParticleEffect(x, y) {
-                // Crear emisor de partículas
-                const particles = this.add.particles('jewel_base');
+                // Crear partículas de celebración
+                const particles = this.add.particles(0, 0);
                 
-                // Si no existe la textura, crear partículas con gráficos
-                if (!particles) {
-                    particles = this.add.particles(0, 0);
-                    const circle = new Phaser.Geom.Circle(0, 0, 5);
-                    particles.setGeometry(circle);
-                }
+                // Crear un círculo como textura para las partículas
+                const circle = new Phaser.Geom.Circle(0, 0, 6);
+                particles.setGeometry(circle);
                 
                 const emitter = particles.createEmitter({
                     ...this.particleConfig,
-                    x: x,
-                    y: y
+                    x: x, y: y,
+                    blendMode: 'ADD'
                 });
-                
-                // Detener emisor después de un tiempo
-                this.time.delayedCall(500, () => {
-                    emitter.stop();
-                });
-                
-                // Destruir partículas después de que terminen
-                this.time.delayedCall(1500, () => {
-                    particles.destroy();
-                });
+
+                // Detener y limpiar después
+                this.time.delayedCall(600, () => emitter.stop());
+                this.time.delayedCall(1500, () => particles.destroy());
             }
-            
+
             showCompletionScreen() {
                 const width = this.cameras.main.width;
                 const height = this.cameras.main.height;
-                
-                // Crear fondo semi-transparente
+
+                // Fondo semitransparente
                 const overlay = this.add.graphics();
                 overlay.fillStyle(0x000000, 0.7);
                 overlay.fillRect(0, 0, width, height);
-                
-                // Crear panel de victoria
+
+                // Panel de victoria
                 const panel = this.add.graphics();
                 panel.fillStyle(0x6A11CB, 0.95);
-                panel.fillRoundedRect(width/2 - 250, height/2 - 200, 500, 400, 30);
-                panel.lineStyle(8, 0xFFD700, 1);
-                panel.strokeRoundedRect(width/2 - 250, height/2 - 200, 500, 400, 30);
-                
-                // Título de victoria
-                const title = this.add.text(width/2, height/2 - 120, 'GREAT JOB!', {
-                    fontFamily: 'Comic Sans MS',
-                    fontSize: '60px',
+                panel.fillRoundedRect(width/2 - 200, height/2 - 150, 400, 300, 25);
+                panel.lineStyle(6, 0xFFD700, 1);
+                panel.strokeRoundedRect(width/2 - 200, height/2 - 150, 400, 300, 25);
+
+                // Texto
+                const title = this.add.text(width/2, height/2 - 90, '¡EXCELENTE!', {
+                    fontFamily: 'Arial Rounded MT Bold',
+                    fontSize: '52px',
                     color: '#FFD700',
                     fontWeight: 'bold',
                     stroke: '#000000',
-                    strokeThickness: 8,
-                    shadow: { offsetX: 4, offsetY: 4, color: '#000', blur: 5, fill: true }
+                    strokeThickness: 6
                 });
                 title.setOrigin(0.5);
-                
-                // Mensaje de felicitación
-                const message = this.add.text(width/2, height/2 - 30, 
-                    '¡Has ayudado a la Maestra Daniela\na recuperar todas sus joyas vocales!', {
-                    fontFamily: 'Comic Sans MS',
-                    fontSize: '28px',
+
+                const message = this.add.text(width/2, height/2 - 10, 
+                    'Has organizado todas\nlas joyas correctamente.', {
+                    fontFamily: 'Arial Rounded MT Bold',
+                    fontSize: '26px',
                     color: '#FFFFFF',
                     align: 'center',
                     lineSpacing: 10
                 });
                 message.setOrigin(0.5);
-                
+
                 // Botón de reinicio
                 const button = this.add.graphics();
                 button.fillStyle(0x4CAF50, 1);
-                button.fillRoundedRect(width/2 - 120, height/2 + 60, 240, 70, 15);
+                button.fillRoundedRect(width/2 - 100, height/2 + 60, 200, 60, 12);
                 button.lineStyle(4, 0x2E7D32, 1);
-                button.strokeRoundedRect(width/2 - 120, height/2 + 60, 240, 70, 15);
-                
-                // Texto del botón
-                const buttonText = this.add.text(width/2, height/2 + 95, 'JUGAR DE NUEVO', {
-                    fontFamily: 'Comic Sans MS',
-                    fontSize: '26px',
+                button.strokeRoundedRect(width/2 - 100, height/2 + 60, 200, 60, 12);
+
+                const buttonText = this.add.text(width/2, height/2 + 90, 'JUGAR DE NUEVO', {
+                    fontFamily: 'Arial Rounded MT Bold',
+                    fontSize: '22px',
                     color: '#FFFFFF',
                     fontWeight: 'bold'
                 });
                 buttonText.setOrigin(0.5);
-                
-                // Hacer el botón interactivo
-                button.setInteractive(new Phaser.Geom.Rectangle(width/2 - 120, height/2 + 60, 240, 70), 
+
+                // Hacer interactivo el botón
+                button.setInteractive(new Phaser.Geom.Rectangle(width/2 - 100, height/2 + 60, 200, 60), 
                                      Phaser.Geom.Rectangle.Contains);
                 
-                // Efectos de hover en el botón
-                button.on('pointerover', () => {
-                    button.clear();
-                    button.fillStyle(0x66BB6A, 1);
-                    button.fillRoundedRect(width/2 - 120, height/2 + 60, 240, 70, 15);
-                    button.lineStyle(4, 0x388E3C, 1);
-                    button.strokeRoundedRect(width/2 - 120, height/2 + 60, 240, 70, 15);
-                    
-                    // Efecto de escala
-                    this.tweens.add({
-                        targets: button,
-                        scaleX: 1.05,
-                        scaleY: 1.05,
-                        duration: 150,
-                        ease: 'Power2'
-                    });
-                });
-                
-                button.on('pointerout', () => {
-                    button.clear();
-                    button.fillStyle(0x4CAF50, 1);
-                    button.fillRoundedRect(width/2 - 120, height/2 + 60, 240, 70, 15);
-                    button.lineStyle(4, 0x2E7D32, 1);
-                    button.strokeRoundedRect(width/2 - 120, height/2 + 60, 240, 70, 15);
-                    
-                    // Volver a escala normal
-                    this.tweens.add({
-                        targets: button,
-                        scaleX: 1,
-                        scaleY: 1,
-                        duration: 150,
-                        ease: 'Power2'
-                    });
-                });
-                
-                // Acción al hacer clic en el botón
                 button.on('pointerdown', () => {
-                    // Efecto de clic
-                    this.tweens.add({
-                        targets: button,
-                        scaleX: 0.95,
-                        scaleY: 0.95,
-                        duration: 100,
-                        ease: 'Power2',
-                        yoyo: true,
-                        onComplete: () => {
-                            // Reiniciar la escena
-                            this.scene.restart();
-                        }
-                    });
+                    this.scene.restart();
                 });
-                
+
                 // Animación de entrada
-                overlay.setAlpha(0);
-                panel.setAlpha(0);
-                title.setAlpha(0);
-                message.setAlpha(0);
-                button.setAlpha(0);
-                buttonText.setAlpha(0);
-                
+                overlay.setAlpha(0); panel.setAlpha(0);
+                title.setAlpha(0); message.setAlpha(0);
+                button.setAlpha(0); buttonText.setAlpha(0);
+
                 this.tweens.add({
-                    targets: overlay,
-                    alpha: 1,
-                    duration: 500,
-                    ease: 'Power2'
+                    targets: overlay, alpha: 1, duration: 500
                 });
-                
+
                 this.tweens.add({
                     targets: [panel, title, message, button, buttonText],
-                    alpha: 1,
-                    duration: 600,
-                    delay: 300,
-                    ease: 'Power2'
+                    alpha: 1, duration: 600, delay: 300
                 });
-                
-                // Añadir efectos de partículas de celebración
-                this.createCelebrationParticles();
-            }
-            
-            createCelebrationParticles() {
-                const width = this.cameras.main.width;
-                const height = this.cameras.main.height;
-                
-                // Crear múltiples emisores de partículas para celebrar
-                for (let i = 0; i < 5; i++) {
-                    const particles = this.add.particles('jewel_base');
-                    
-                    if (!particles) {
-                        particles = this.add.particles(0, 0);
-                        const circle = new Phaser.Geom.Circle(0, 0, 5);
-                        particles.setGeometry(circle);
-                    }
-                    
-                    const emitter = particles.createEmitter({
-                        frame: 'circle',
-                        quantity: 30,
-                        lifespan: 2000,
-                        speed: { min: 150, max: 300 },
-                        scale: { start: 1, end: 0 },
-                        alpha: { start: 1, end: 0 },
-                        blendMode: 'ADD',
-                        x: Phaser.Math.Between(width * 0.2, width * 0.8),
-                        y: Phaser.Math.Between(height * 0.2, height * 0.8),
-                        frequency: 100,
-                        duration: 1000
-                    });
-                    
-                    // Detener y destruir después de un tiempo
-                    this.time.delayedCall(2000, () => {
-                        emitter.stop();
-                    });
-                    
-                    this.time.delayedCall(4000, () => {
-                        particles.destroy();
-                    });
-                }
-            }
-            
-            resize(gameSize) {
-                // Ajustar elementos al cambiar el tamaño de la pantalla
-                const width = gameSize.width;
-                const height = gameSize.height;
-                
-                // Actualizar cámara
-                this.cameras.resize(width, height);
-                
-                // Nota: En un juego más complejo, necesitaríamos reposicionar
-                // todos los elementos aquí. Para este juego, confiamos en
-                // Phaser.Scale.FIT y en que los elementos se crean relativos
-                // a las dimensiones de la pantalla en el momento de creación.
             }
         }
     </script>
